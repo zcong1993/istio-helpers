@@ -64,3 +64,22 @@ func Grpc2Grpc(ctx context.Context) context.Context {
 	tracingMd := mdPick(md, TracingKeys)
 	return metadata.NewOutgoingContext(ctx, tracingMd)
 }
+
+// Http2http pass tracing data from http header to downstream http header
+func Http2http(headers http.Header, extHeaders ...http.Header) http.Header {
+	mp := http.Header{}
+	for _, key := range TracingKeys {
+		v := headers.Get(key)
+		if v != "" {
+			mp[key] = []string{v}
+		}
+	}
+
+	for _, extHeader := range extHeaders {
+		for k, v := range extHeader {
+			mp[k] = v
+		}
+	}
+
+	return mp
+}
