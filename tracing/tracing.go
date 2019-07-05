@@ -72,7 +72,7 @@ func Grpc2Grpc(ctx context.Context, tracingKeys []string) context.Context {
 }
 
 // Http2httpDest add tracing data to dest header
-func Http2httpDest(headers, tracingKeys []string, source, dest http.Header) {
+func Http2httpDest(tracingKeys []string, source, dest http.Header) {
 	for k, v := range source {
 		if include(tracingKeys, k) {
 			dest[k] = v
