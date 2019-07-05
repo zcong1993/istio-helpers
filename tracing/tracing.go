@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// TracingKeys is default tracing keys for istio
-var TracingKeys = []string{
+// DefaultTracingKeys is default tracing keys for istio
+var DefaultTracingKeys = []string{
 	"x-request-id",
 	"x-b3-traceid",
 	"x-b3-spanid",
@@ -27,10 +27,19 @@ func mdPick(md metadata.MD, keys []string) metadata.MD {
 	return newMd
 }
 
+func include(arr []string, key string) bool {
+	for _, v := range arr {
+		if v == key {
+			return true
+		}
+	}
+	return false
+}
+
 // Http2grpc pass tracing data from http header to downstream grpc metadata
-func Http2grpc(ctx context.Context, headers http.Header) context.Context {
+func Http2grpc(ctx context.Context, tracingKeys []string, headers http.Header) context.Context {
 	mp := map[string]string{}
-	for _, key := range TracingKeys {
+	for _, key := range tracingKeys {
 		v := headers.Get(key)
 		if v != "" {
 			mp[key] = v
@@ -41,64 +50,32 @@ func Http2grpc(ctx context.Context, headers http.Header) context.Context {
 }
 
 // Grpc2http pass tracing data from grpc metadata to downstream http header
-func Grpc2http(ctx context.Context, originHeaders ...http.Header) http.Header {
+func Grpc2http(ctx context.Context, tracingKeys []string, dest http.Header) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return http.Header{}
+		return
 	}
-	tracingMd := mdPick(md, TracingKeys)
-	tracingHeader := http.Header(tracingMd)
-	for _, originHeader := range originHeaders {
-		for k := range originHeader {
-			tracingHeader.Set(k, originHeader.Get(k))
-		}
+	tracingMd := mdPick(md, tracingKeys)
+	for k, v := range tracingMd {
+		dest[k] = v
 	}
-	return tracingHeader
 }
 
 // Grpc2Grpc pass tracing data from grpc metadata to downstream grpc metadata
-func Grpc2Grpc(ctx context.Context) context.Context {
+func Grpc2Grpc(ctx context.Context, tracingKeys []string) context.Context {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return ctx
 	}
-	tracingMd := mdPick(md, TracingKeys)
+	tracingMd := mdPick(md, tracingKeys)
 	return metadata.NewOutgoingContext(ctx, tracingMd)
 }
 
-// Http2http pass tracing data from http header to downstream http header
-func Http2http(headers http.Header, extHeaders ...http.Header) http.Header {
-	mp := http.Header{}
-	for _, key := range TracingKeys {
-		v := headers.Get(key)
-		if v != "" {
-			mp[key] = []string{v}
-		}
-	}
-
-	for _, extHeader := range extHeaders {
-		for k, v := range extHeader {
-			mp[k] = v
-		}
-	}
-
-	return mp
-}
-
 // Http2httpDest add tracing data to dest header
-func Http2httpDest(headers, dest http.Header, extHeaders ...http.Header) {
-	for _, key := range TracingKeys {
-		v := headers.Get(key)
-		if v != "" {
-			dest.Add(key, v)
-		}
-	}
-
-	for _, extHeader := range extHeaders {
-		for k, v := range extHeader {
-			for _, vv := range v {
-				dest.Add(k, vv)
-			}
+func Http2httpDest(headers, tracingKeys []string, source, dest http.Header) {
+	for k, v := range source {
+		if include(tracingKeys, k) {
+			dest[k] = v
 		}
 	}
 }
