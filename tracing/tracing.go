@@ -18,6 +18,17 @@ var DefaultTracingKeys = []string{
 	"x-ot-span-context",
 }
 
+// DefaultTracingKeys is default tracing keys for web server
+var DefaultTracingKeysWeb = []string{
+	"X-B3-Parentspanid",
+	"X-B3-Sampled",
+	"X-B3-Spanid",
+	"X-B3-Traceid",
+	"X-Request-Id",
+	"X-B3-Flags",
+	"X-Ot-Span-Context",
+}
+
 func mdPick(md metadata.MD, keys []string) metadata.MD {
 	newMd := metadata.MD{}
 	for _, key := range keys {
