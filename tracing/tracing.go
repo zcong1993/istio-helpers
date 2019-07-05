@@ -2,8 +2,9 @@ package tracing
 
 import (
 	"context"
-	"google.golang.org/grpc/metadata"
 	"net/http"
+
+	"google.golang.org/grpc/metadata"
 )
 
 // TracingKeys is default tracing keys for istio
@@ -82,4 +83,22 @@ func Http2http(headers http.Header, extHeaders ...http.Header) http.Header {
 	}
 
 	return mp
+}
+
+// Http2httpDest add tracing data to dest header
+func Http2httpDest(headers, dest http.Header, extHeaders ...http.Header) {
+	for _, key := range TracingKeys {
+		v := headers.Get(key)
+		if v != "" {
+			dest.Add(key, v)
+		}
+	}
+
+	for _, extHeader := range extHeaders {
+		for k, v := range extHeader {
+			for _, vv := range v {
+				dest.Add(k, vv)
+			}
+		}
+	}
 }
